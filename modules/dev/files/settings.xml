@@ -1,0 +1,29 @@
+<settings>
+    <proxies>
+        <proxy>
+            <active>true</active>
+            <protocol>http</protocol>
+            <host>proxy.example.com</host>
+            <port>8080</port>
+            <nonProxyHosts>.example.com</nonProxyHosts>
+        </proxy>
+    </proxies>
+    <profiles>
+        <profile>
+            <id>Dev Build Properties</id>
+            <activation>
+                <property>
+                    <name>buildtype</name>
+                    <value>dev</value>
+                </property>
+            </activation> 
+            <properties> 
+                <build.system.proxyhost>proxy.example.com</build.system.proxyhost> 
+                <build.system.proxyport>8080</build.system.proxyport> 
+                <build.system.proxyset>true</build.system.proxyset> 
+                <build.system.nonproxyhosts>.example.com</build.system.nonproxyhosts> 
+                <build.shindig.proxy>proxy.example.com:8080</build.shindig.proxy> 
+            </properties> 
+        </profile> 
+    </profiles> 
+</settings>
