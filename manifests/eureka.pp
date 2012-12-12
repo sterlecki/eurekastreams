@@ -3,6 +3,20 @@
 
 #setting the global path for all exec's 
 
+include utilities
+
+check_line { "java_home-env-variable":
+	file => "/etc/environment",
+	line => "JAVA_HOME=\"/usr/lib/jvm/java-7-openjdk-amd64/\"",
+	ensure => present
+}
+	
+check_line { "java_opts-env-variable":
+	file => "/etc/environment",
+	line => "JAVA_OPTS=\"-Xmx2048m\"",
+	ensure => present
+}
+
 Exec { path => [ "/bin/", "/sbin/" , "/usr/bin/", "/usr/sbin/" ] }
 
 exec{ "update apt packages":
