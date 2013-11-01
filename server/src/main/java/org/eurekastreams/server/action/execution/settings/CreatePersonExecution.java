@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011 Lockheed Martin Corporation
+ * Copyright (c) 2010-2013 Lockheed Martin Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import org.eurekastreams.server.service.actions.strategies.ReflectiveUpdater;
 
 /**
  * Strategy for creating person record in the system.
- *
  */
 public class CreatePersonExecution implements TaskHandlerExecutionStrategy<ActionContext>
 {
@@ -49,11 +48,6 @@ public class CreatePersonExecution implements TaskHandlerExecutionStrategy<Actio
     private String sendWelcomeEmailAction = null;
 
     /**
-     * Persist resource action.
-     */
-    private PersistResourceExecution<Person> persistResourceExecution;
-
-    /**
      * Factory to create person.
      */
     private final CreatePersonActionFactory createPersonActionFactory;
@@ -65,7 +59,7 @@ public class CreatePersonExecution implements TaskHandlerExecutionStrategy<Actio
 
     /**
      * Constructor.
-     *
+     * 
      * @param inCreatePersonActionFactory
      *            action factory persist user updates.
      * @param inPersonMapper
@@ -83,10 +77,10 @@ public class CreatePersonExecution implements TaskHandlerExecutionStrategy<Actio
 
     /**
      * Add person to the system.
-     *
+     * 
      * @param inActionContext
      *            The action context
-     *
+     * 
      * @return true on success.
      */
     @Override
@@ -95,8 +89,8 @@ public class CreatePersonExecution implements TaskHandlerExecutionStrategy<Actio
         CreatePersonRequest createRequest = (CreatePersonRequest) inActionContext.getActionContext().getParams();
         Person inPerson = createRequest.getPerson();
 
-        persistResourceExecution = createPersonActionFactory.getCreatePersonAction(personMapper,
-                new ReflectiveUpdater());
+        PersistResourceExecution<Person> persistResourceExecution = createPersonActionFactory.getCreatePersonAction(
+                personMapper, new ReflectiveUpdater());
 
         log.debug("Adding to database: " + inPerson.getAccountId());
 
@@ -109,8 +103,8 @@ public class CreatePersonExecution implements TaskHandlerExecutionStrategy<Actio
         if (createRequest.getSendEmail() && sendWelcomeEmailAction != null && !sendWelcomeEmailAction.isEmpty())
         {
             inActionContext.getUserActionRequests().add(
-                    new UserActionRequest(sendWelcomeEmailAction, null, new SendWelcomeEmailRequest(inPerson
-                            .getEmail(), inPerson.getAccountId())));
+                    new UserActionRequest(sendWelcomeEmailAction, null, new SendWelcomeEmailRequest(
+                            inPerson.getEmail(), inPerson.getAccountId())));
         }
 
         return person;

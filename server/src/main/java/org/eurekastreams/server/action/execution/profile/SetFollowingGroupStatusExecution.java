@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.eurekastreams.commons.logging.LogFactory;
 import org.eurekastreams.commons.actions.InlineExecutionStrategyExecutor;
 import org.eurekastreams.commons.actions.TaskHandlerExecutionStrategy;
 import org.eurekastreams.commons.actions.context.DefaultPrincipal;
@@ -56,10 +58,15 @@ import org.eurekastreams.server.search.modelview.PersonModelView;
 
 /**
  * Class responsible for providing the strategy that updates the appropriate lists when a group is followed.
- *
+ * 
  */
 public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStrategy<PrincipalActionContext>
 {
+    /**
+     * Logger.
+     */
+    private final Log log = LogFactory.make();
+
     /**
      * Local instance of the GetDomainGroupsByShortNames mapper.
      */
@@ -105,7 +112,7 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
 
     /**
      * Constructor for the SetFollowingGroupStatusExecution.
-     *
+     * 
      * @param inGroupMapper
      *            - instance of the GetDomainGroupsByShortNames mapper.
      * @param inGetPersonByIdMapper
@@ -124,7 +131,7 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
      *            post executor.
      * @param inDeleteCacheKeyMapper
      *            Delete cache key mapper.
-     *
+     * 
      */
     public SetFollowingGroupStatusExecution(final GetDomainGroupsByShortNames inGroupMapper,
             final DomainMapper<Long, PersonModelView> inGetPersonByIdMapper,
@@ -148,7 +155,7 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
 
     /**
      * {@inheritDoc}.
-     *
+     * 
      * This method sets the following status based on the passed in request object. There is an extra block of code here
      * that handles an additional request object type that passes in the follower and target ids by string name instead
      * of their long id's. This extra support is needed for the GroupCreator object that gets called from the back end
@@ -220,8 +227,8 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
                     .singleton(CacheKeys.GROUP_BY_ID + targetId)));
 
             // remove any requests from the user for group membership
-            if (deleteRequestForGroupMembershipMapper.execute(new RequestForGroupMembershipRequest(targetId,
-                    followerId)))
+            if (deleteRequestForGroupMembershipMapper
+                    .execute(new RequestForGroupMembershipRequest(targetId, followerId)))
             {
                 // if any requests were present, then user was just approved for access
                 asyncRequests.add(new UserActionRequest(CreateNotificationsRequest.ACTION_NAME, null,
@@ -287,8 +294,23 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
                         inActionContext.getUserActionRequests());
             }
             break;
+
         case NOTFOLLOWING:
-            // Update the db and cache for list of followers and following.
+
+            // Check if the User to be removed is a Group Coordinator.
+            boolean isToBeRemovedUserGroupCoordinator = domainGroupMapper.isInputUserGroupCoordinator(followerId,
+                    targetId);
+
+            // Do not remove the last Group Coordinator.
+            if ((domainGroupMapper.getGroupCoordinatorCount(targetId) == 1) && isToBeRemovedUserGroupCoordinator)
+            {
+                log.error("Cannot remove followerId: " + followerId + " " + "from targetId:" + targetId
+                        + " since there's " + "only a single Group Coordinator remaining " + "in the Group");
+                throw new ExecutionException("Cannot remove followerId: " + followerId + " " + "from targetId:"
+                        + targetId + " since there's " + "only a single Group Coordinator remaining " + "in the Group");
+            }
+
+            // Update the db for list of followers and following.
             domainGroupMapper.removeFollower(followerId, targetId);
 
             // Queue async action to remove the newly followed group from cache (to sync follower counts)
@@ -307,7 +329,26 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
                     Collections.singletonList(CacheKeys.GROUPS_FOLLOWED_BY_PERSON + followerId), Collections
                             .singletonList(targetId))));
 
+            if (isToBeRemovedUserGroupCoordinator)
+            {
+                // delete group coordinator from db
+                domainGroupMapper.removeGroupCoordinator(followerId, targetId);
+
+                // queue the removal of the target group's coordinator
+                asyncRequests.add(new UserActionRequest("deleteCacheKeysAction", null, (Serializable) Collections
+                        .singleton(CacheKeys.COORDINATOR_PERSON_IDS_BY_GROUP_ID + targetId)));
+
+                // Update the 'PRIVATE_GROUP_IDS_VIEWABLE_BY_PERSON_AS_COORDINATOR' cache if Private Group
+                if (domainGroupMapper.isGroupPrivate(targetId))
+                {
+                    // queue the removal the person's list of followed group ids
+                    asyncRequests.add(new UserActionRequest("deleteCacheKeysAction", null, (Serializable) Collections
+                            .singleton(CacheKeys.PRIVATE_GROUP_IDS_VIEWABLE_BY_PERSON_AS_COORDINATOR + followerId)));
+                }
+            }
+
             break;
+
         default:
             // nothing to do here.
         }
@@ -317,7 +358,7 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
 
     /**
      * Creates a principal for the given user's id and account id.
-     *
+     * 
      * @param followerId
      *            Person id.
      * @param followerAccountId
@@ -328,4 +369,30 @@ public class SetFollowingGroupStatusExecution implements TaskHandlerExecutionStr
     {
         return new DefaultPrincipal(followerAccountId, null, followerId);
     }
+
+    /**
+     * Checks whether the given user is a Group Coordinator.
+     * 
+     * @param userAccountId
+     *            Account Id of User to check whether he/she's a Group Coordinator
+     * @param group
+     *            Group to check if userAccountId is a Group Coordinator for it
+     * 
+     * @return Whether the input user is a Group Coordinator
+     */
+    private boolean isUserGroupCoordinator(final String userAccountId, final DomainGroupModelView group)
+    {
+        List<PersonModelView> groupCoordinators = group.getCoordinators();
+
+        for (PersonModelView p : groupCoordinators)
+        {
+            if (p.getAccountId().equals(userAccountId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }

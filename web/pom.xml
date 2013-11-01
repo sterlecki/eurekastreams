@@ -47,6 +47,11 @@
             <artifactId>urlrewrite</artifactId>
             <version>3.2.0-beta</version>
         </dependency>
+            <dependency>
+            <groupId>com.thetransactioncompany</groupId>
+            <artifactId>cors-filter</artifactId>
+            <version>1.7</version>
+        </dependency>
         <!--
             commons-lang is specified here because gilead and
             spring-ldap-core both use versions that are too old to be
@@ -690,7 +695,7 @@
                         <configuration>
                             <module>${build.gwt.modulename}</module>
                             <logLevel>INFO</logLevel>
-                            <extraJvmArgs>-Xmx1024m</extraJvmArgs>
+                            <extraJvmArgs>-Xmx3324m</extraJvmArgs>
                             <gwtVersion>${gwtVersion}</gwtVersion>
                             <mergedWebXml>${project.build.directory}/web.xml</mergedWebXml>
                             <webXmlServletPathAsIs>true</webXmlServletPathAsIs>
@@ -744,6 +749,11 @@
                             <prefix>/opt/tomcat6/current/eurekawebapps</prefix>
                             <defineStatements>
                                 <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+                                <defineStatement>_binaries_in_noarch_packages_terminate_build 0</defineStatement>
+                                <defineStatement>_source_filedigest_algorithm md5</defineStatement>
+                                <defineStatement>_binary_filedigest_algorithm md5</defineStatement>
+                                <defineStatement>_source_payload nil</defineStatement>
+                                <defineStatement>_binary_payload nil</defineStatement>
                             </defineStatements>
                             <mappings>
                                 <mapping>

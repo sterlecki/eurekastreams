@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Theme>
-  <Title>Green Blocks</Title>
-  <Description>Green Blocks</Description>
-  <AuthorName>Eureka Streams</AuthorName>
-  <AuthorEmail>support@eurekastreams.org</AuthorEmail>
+	<Title>Green Blocks</Title>
+	<Description>Green Blocks</Description>
+	<AuthorName>Eureka Streams</AuthorName>
+	<AuthorEmail>support@eurekastreams.org</AuthorEmail>
 	<HeaderBackground>
 		<HeaderBackgroundColor>white</HeaderBackgroundColor>
 		<HeaderForegroundColor>white</HeaderForegroundColor>
@@ -19,6 +19,6 @@
 	<GadgetBorderColor>#355749</GadgetBorderColor>
 	<PageBackground>
 		<PageBackgroundColor>#a4d1c1</PageBackgroundColor>
-		<PageBackgroundImage/>
+		<PageBackgroundImage />
 	</PageBackground>
 </Theme>

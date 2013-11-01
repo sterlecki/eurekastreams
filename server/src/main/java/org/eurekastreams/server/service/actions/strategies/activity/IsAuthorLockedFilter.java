@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Lockheed Martin Corporation
+ * Copyright (c) 2011-2012 Lockheed Martin Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,10 @@ public class IsAuthorLockedFilter implements ActivityFilter
             {
                 ids.add(activity.getActor().getId());
             }
+            if (activity.getOriginalActor() != null && activity.getOriginalActor().getType() == EntityType.PERSON)
+            {
+                ids.add(activity.getOriginalActor().getId());
+            }
         }
 
         List<PersonModelView> peopleList = getPeopleMapper.execute(new ArrayList<Long>(ids));
@@ -77,7 +81,11 @@ public class IsAuthorLockedFilter implements ActivityFilter
         {
             if (activity.getActor().getType() == EntityType.PERSON)
             {
-                activity.setLockedAuthor(peopleIndex.get(activity.getActor().getId()));
+                activity.getActor().setActive(!peopleIndex.get(activity.getActor().getId()));
+            }
+            if (activity.getOriginalActor() != null && activity.getOriginalActor().getType() == EntityType.PERSON)
+            {
+                activity.getOriginalActor().setActive(!peopleIndex.get(activity.getOriginalActor().getId()));
             }
         }
     }

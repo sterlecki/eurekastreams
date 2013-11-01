@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011 Lockheed Martin Corporation
+ * Copyright (c) 2009-2013 Lockheed Martin Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.eurekastreams.server.search.modelview;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import org.junit.Before;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -78,14 +79,14 @@ public class DomainGroupModelViewTest
     private final long domainGroupId = 28382L;
 
     /**
+     * The person that created the group.
+     */
+    private final Person createdby = new Person("testid", "test", "my", "last", "preferred");
+
+    /**
      * IsPublic.
      */
     private final boolean isPublic = true;
-
-    /**
-     * The person to load as creator.
-     */
-    private final Person createdby = new Person("testid", "test", "my", "group", "test group");
 
     /**
      * Stream id.
@@ -108,8 +109,17 @@ public class DomainGroupModelViewTest
     private final boolean streamPostable = false;
 
     /**
+     * Setup method.
+     */
+    @Before
+    public void setup()
+    {
+        createdby.setDisplayNameSuffix(" (FOO)");
+    }
+
+    /**
      * Test helper method to assert all properties.
-     *
+     * 
      * @param sut
      *            the SUT
      */
@@ -126,6 +136,7 @@ public class DomainGroupModelViewTest
         assertEquals(isPublic, sut.isPublic());
         assertEquals(createdby.getAccountId(), sut.getPersonCreatedByAccountId());
         assertEquals(createdby.getDisplayName(), sut.getPersonCreatedByDisplayName());
+        assertEquals("preferred last (FOO)", sut.getPersonCreatedByDisplayName());
         assertEquals(streamId, sut.getStreamId());
         assertEquals(commentable, sut.isCommentable());
         assertEquals(streamPostable, sut.isStreamPostable());
@@ -136,7 +147,7 @@ public class DomainGroupModelViewTest
 
     /**
      * Test helper method to assert the default values.
-     *
+     * 
      * @param sut
      *            the SUT
      */

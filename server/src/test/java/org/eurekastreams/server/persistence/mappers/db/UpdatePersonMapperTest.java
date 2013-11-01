@@ -81,6 +81,7 @@ public class UpdatePersonMapperTest extends MapperTest
 
         Person dbPerson = (Person) getEntityManager().createQuery("FROM Person WHERE id = :id")
                 .setParameter("id", PERSON_ID).getSingleResult();
+        assertTrue(dbPerson.getDisplayNameSuffix().equals(""));
 
         dbPerson.setAdditionalProperties(additional);
         getEntityManager().flush();
@@ -88,11 +89,12 @@ public class UpdatePersonMapperTest extends MapperTest
         assertTrue(dbPerson.getAdditionalProperties() != null);
 
         Person p = new Person("fordp", "Ford", "X", "Prefect", "Volgon-Swatter");
+        assertTrue(p.getDisplayNameSuffix().equals(""));
         p.setAdditionalProperties(additional);
-
-        UpdatePersonResponse response = sut.execute(p);
-
+        
+        UpdatePersonResponse response = sut.execute(p);        
         assertFalse(response.wasUserUpdated());
+        assertFalse(response.wasDisplayNameUpdated());
     }
 
     /**
@@ -116,6 +118,7 @@ public class UpdatePersonMapperTest extends MapperTest
         UpdatePersonResponse response = sut.execute(p);
 
         assertTrue(response.wasUserUpdated());
+        assertFalse(response.wasDisplayNameUpdated());
         assertTrue(dbPerson.getAdditionalProperties() == null);
     }
 
@@ -134,7 +137,9 @@ public class UpdatePersonMapperTest extends MapperTest
 
         Person p = new Person("fordp", "Ford", "X", newLastName, "Volgon-Swatter");
 
-        sut.execute(p);
+        UpdatePersonResponse response = sut.execute(p);
+        assertTrue(response.wasUserUpdated());
+        assertTrue(response.wasDisplayNameUpdated());
 
         getEntityManager().flush();
         getEntityManager().clear();
@@ -143,6 +148,35 @@ public class UpdatePersonMapperTest extends MapperTest
                 .setParameter("id", PERSON_ID).getSingleResult();
 
         assertTrue(resultPerson.getLastName().equals(newLastName));
+    }
+
+    /**
+     * Test updating with new display name suffix.
+     */
+    @Test
+    public void testNewDisplayNameSuffix()
+    {
+        final String newLastName = "NewLastName";
+
+        Person dbPerson = (Person) getEntityManager().createQuery("FROM Person WHERE id = :id")
+                .setParameter("id", PERSON_ID).getSingleResult();
+
+        assertTrue(dbPerson.getDisplayNameSuffix().equals(""));
+
+        Person p = new Person("fordp", "Ford", "X", newLastName, "Volgon-Swatter");
+        p.setDisplayNameSuffix(" FOO");
+
+        UpdatePersonResponse response = sut.execute(p);
+        assertTrue(response.wasUserUpdated());
+        assertTrue(response.wasDisplayNameUpdated());
+
+        getEntityManager().flush();
+        getEntityManager().clear();
+
+        Person resultPerson = (Person) getEntityManager().createQuery("FROM Person WHERE id = :id")
+                .setParameter("id", PERSON_ID).getSingleResult();
+
+        assertTrue(resultPerson.getDisplayNameSuffix().equals(" FOO"));
     }
 
     /**

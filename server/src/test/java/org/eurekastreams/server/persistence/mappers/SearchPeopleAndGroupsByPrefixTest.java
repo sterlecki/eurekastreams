@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Lockheed Martin Corporation
+ * Copyright (c) 2010-2013 Lockheed Martin Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.eurekastreams.server.persistence.mappers;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.LinkedHashSet;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -166,6 +167,8 @@ public class SearchPeopleAndGroupsByPrefixTest
                 allowing(groupView).getShortName();
                 oneOf(groupView).getName();
                 oneOf(groupView).getStreamId();
+
+                allowing(personView).isAccountLocked();
             }
         });
 
@@ -179,7 +182,7 @@ public class SearchPeopleAndGroupsByPrefixTest
     @Test
     public void testExecuteWithGroupList()
     {
-        final HashSet<Long> groupIds = new HashSet<Long>(2);
+        final LinkedHashSet<Long> groupIds = new LinkedHashSet<Long>(2);
         groupIds.add(5L);
         groupIds.add(6L);
 
@@ -217,6 +220,8 @@ public class SearchPeopleAndGroupsByPrefixTest
                 allowing(groupView).getShortName();
                 oneOf(groupView).getName();
                 oneOf(groupView).getStreamId();
+
+                allowing(personView).isAccountLocked();
             }
         });
 

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Theme>
-  <Title>Lockheed Air Power</Title>
-  <Description>Lockheed Air Power</Description>
-  <AuthorName>Eureka Streams</AuthorName>
-  <AuthorEmail>support@eurekastreams.org</AuthorEmail>
+	<Title>Lockheed Air Power</Title>
+	<Description>Lockheed Air Power</Description>
+	<AuthorName>Eureka Streams</AuthorName>
+	<AuthorEmail>support@eurekastreams.org</AuthorEmail>
 	<HeaderBackground>
 		<HeaderBackgroundColor>white</HeaderBackgroundColor>
 		<HeaderForegroundColor>white</HeaderForegroundColor>
@@ -19,6 +19,6 @@
 	<GadgetBorderColor>#313f3f</GadgetBorderColor>
 	<PageBackground>
 		<PageBackgroundColor>#647272</PageBackgroundColor>
-		<PageBackgroundImage/>
+		<PageBackgroundImage />
 	</PageBackground>
 </Theme>

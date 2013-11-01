@@ -11,7 +11,13 @@
 
         .themeable .site-labeling
         {
-            color: #0b4268;
+            color: white;
+        }
+        
+        .themeable .site-labeling a:link, .themeable .site-labeling a:visited, .themeable .site-labeling a:hover, .themeable .site-labeling a:active
+        {
+            color: white;
+            text-decoration: underline;
         }
 
     .themeable div.tab, .themeable div.new-tab-button

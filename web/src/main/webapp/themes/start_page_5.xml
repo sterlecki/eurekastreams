@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Theme>
-  <Title>Lockheed Martin Through the Years</Title>
-  <Description>Lockheed Martin Through the Years</Description>
-  <AuthorName>Eureka Streams</AuthorName>
-  <AuthorEmail>support@eurekastreams.org</AuthorEmail>
+	<Title>Lockheed Martin Through the Years</Title>
+	<Description>Lockheed Martin Through the Years</Description>
+	<AuthorName>Eureka Streams</AuthorName>
+	<AuthorEmail>support@eurekastreams.org</AuthorEmail>
 	<HeaderBackground>
 		<HeaderBackgroundColor>white</HeaderBackgroundColor>
 		<HeaderForegroundColor>white</HeaderForegroundColor>
@@ -19,7 +19,7 @@
 	<GadgetBorderColor>#746853</GadgetBorderColor>
 	<PageBackground>
 		<PageBackgroundColor>#e6e1d0</PageBackgroundColor>
-		<PageBackgroundImage/>
+		<PageBackgroundImage />
 	</PageBackground>
 </Theme>
 

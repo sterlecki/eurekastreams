@@ -120,7 +120,7 @@ import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
-import com.google.gwt.user.client.ui.Anchor;
+//import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTMLPanel;
@@ -132,12 +132,17 @@ import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.UIObject;
 import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.http.client.URL;
 
 /**
  * Activity Page.
  */
 public class ActivityContent extends Composite
 {
+    /** Text displayed for locked users. */
+    private static final String LOCKED_USER_TEXT = "This employee has no profile in Eureka Streams.  This could be due"
+            + " to an incorrect or outdated link, a change in assignment within the company, or leaving the company.";
+
     /** Amount of time to wait after a key is pressed before performing a search. */
     private static final int SEARCH_UPDATE_DELAY = 500;
 
@@ -367,8 +372,8 @@ public class ActivityContent extends Composite
     StreamSearchStatusWidget streamSearchStatusWidget;
 
     /** Link to get contact for emailing to stream. */
-    @UiField
-    Anchor getEmailContactLink;
+    //@UiField
+    //Anchor getEmailContactLink;
 
     /**
      * Panel for unseen activity notifications - hidden when viewing a single activity.
@@ -537,6 +542,9 @@ public class ActivityContent extends Composite
     /** Views used to load the current stream. */
     List<String> loadedViews = Collections.singletonList("[do not match]");
 
+    /** So results for the wrong stream can be detected and ignored. */
+    private String currentStreamRequest;
+
     /** Search term used to load the current stream. */
     String loadedSearchTerm = "";
 
@@ -672,6 +680,12 @@ public class ActivityContent extends Composite
         {
             public void update(final GotStreamResponseEvent event)
             {
+                // throw out results if for the wrong stream (or we don't want the results)
+                if (currentStreamRequest == null || !currentStreamRequest.equals(event.getRequest()))
+                {
+                    return;
+                }
+
                 final PagedSet<ActivityDTO> activitySet = event.getStream();
                 if (activitySet.getPagedSet().size() > 0)
                 {
@@ -887,15 +901,26 @@ public class ActivityContent extends Composite
                             errorPanel.clear();
                             errorPanel.setVisible(true);
                             activitySpinner.addClassName(StaticResourceBundle.INSTANCE.coreCss().displayNone());
-                            errorPanel.add(new Label("Employee no longer has access to Eureka Streams"));
-                            errorPanel.add(new Label("This employee no longer has access to Eureka Streams. "
-                                    + "This could be due to a change in assignment "
-                                    + "within the company or due to leaving the company."));
+                            errorPanel.add(new Label("Employee profile not found"));
+                            errorPanel.add(new Label(LOCKED_USER_TEXT));
                             streamPanel.removeStyleName(StaticResourceBundle.INSTANCE.coreCss().hidden());
+
+                            streamDetailsComposite.setVisible(false);
+                            currentStream.setScopeType(null);
+
+                            // block display of activities
+                            currentStreamRequest = null;
+                            streamPanel.clear();
+                            unseenActivityNotificationPanel.setActive(false);
+                            activitySpinner.addClassName(StaticResourceBundle.INSTANCE.coreCss().displayNone());
+                            streamPanel.addStyleName(StaticResourceBundle.INSTANCE.coreCss().hidden());
+                            noResults.addClassName(StaticResourceBundle.INSTANCE.coreCss().displayNone());
+                            moreLink.setVisible(false);
                         }
                         else
                         {
                             currentStream.setDisplayName(person.getDisplayName());
+                            streamDetailsComposite.setVisible(true);
                         }
                         if (!person.isStreamPostable()
                                 && !person.getAccountId().equals(
@@ -903,11 +928,11 @@ public class ActivityContent extends Composite
                         {
                             currentStream.setScopeType(null);
                         }
-                        if (currentStream.getScopeType() != null)
+                        /*if (currentStream.getScopeType() != null)
                         {
                             getEmailContactLink.setHref("/resources/emailcontact/stream/person/" + person.getId());
                             getEmailContactLink.setVisible(true);
-                        }
+                        }*/
                         if (!singleActivityMode)
                         {
                             EventBus.getInstance().notifyObservers(new PostableStreamScopeChangeEvent(currentStream));
@@ -933,102 +958,157 @@ public class ActivityContent extends Composite
      */
     private void onGroupModelViewReceived(final DomainGroupModelView group)
     {
-        currentDisplayName = group.getDisplayName();
-        currentScopeId = group.getStreamId();
-
-        currentStream.setDisplayName(group.getName());
-
-        if (group.isRestricted())
-        {
-            streamOptionsPanel.getStyle().setDisplay(Display.NONE);
-            currentStream.setScopeType(null);
-            postBox.setVisible(false);
-
-            errorPanel.clear();
-            errorPanel.setVisible(true);
-            activitySpinner.addClassName(StaticResourceBundle.INSTANCE.coreCss().displayNone());
-            errorPanel.add(new Label("Access to this group is restricted"));
-            errorPanel.add(new Label("To view this group's stream please request access from its coordinator"));
-
-            final SpinnerLabelButton button = new SpinnerLabelButton(new ClickHandler()
-            {
-                public void onClick(final ClickEvent inArg0)
-                {
-                    GroupMembershipRequestModel.getInstance().insert(group.getShortName());
-                }
-            });
-
-            EventBus.getInstance().addObserver(InsertedRequestForGroupMembershipResponseEvent.class,
-                    new Observer<InsertedRequestForGroupMembershipResponseEvent>()
-                    {
-                        public void update(final InsertedRequestForGroupMembershipResponseEvent inArg1)
-                        {
-                            button.disable();
-                            EventBus.getInstance()
-                                    .notifyObservers(
-                                            new ShowNotificationEvent(new Notification(
-                                                    "Your request for access has been sent")));
-                        }
-                    });
-
-            button.addStyleName(StaticResourceBundle.INSTANCE.coreCss().requestAccessButton());
-            errorPanel.add(button);
-
-            streamPanel.clear();
-            unseenActivityNotificationPanel.setActive(true);
-        }
-        else
-        {
-            currentStreamEntity = group;
-
-            if (group.getStickyActivity() != null && !singleActivityMode
-                    && (loadedSearchTerm == null || loadedSearchTerm == ""))
-            {
-                stickyActivityHolder.add(stickyActivityRenderer.render(group.getStickyActivity()));
-                UIObject.setVisible(stickyActivityArea, true);
-            }
-        }
-        boolean isCoordinator = false;
-
-        for (PersonModelView coordinator : group.getCoordinators())
-        {
-            AvatarBadgeManager.getInstance().setBadge(style.streamContainerPanel(), coordinator.getUniqueId());
-            if (coordinator.getAccountId().equals(Session.getInstance().getCurrentPerson().getAccountId()))
-            {
-                isCoordinator = true;
-            }
-        }
-        if (!group.isStreamPostable() && !isCoordinator)
-        {
-            currentStream.setScopeType(null);
-        }
-        else
-        {
-            getEmailContactLink.setHref("/resources/emailcontact/stream/group/" + group.getId());
-            getEmailContactLink.setVisible(true);
-        }
-
-        if (!singleActivityMode)
-        {
-            if (Session.getInstance().getCurrentPersonRoles().contains(Role.SYSTEM_ADMIN) || isCoordinator)
-            {
-                streamContainerPanel.addStyleName(StaticResourceBundle.INSTANCE.coreCss().hasOwnerRights());
-            }
-
-            EventBus.getInstance().notifyObservers(new PostableStreamScopeChangeEvent(currentStream));
-        }
-
-        if (deferLoadAwaitingEntityReceived)
-        {
-            deferLoadAwaitingEntityReceived = false;
-            currentRequestObj = StreamJsonRequestFactory.setExcludeId(group.getStickyActivityId(), currentRequestObj);
-            if (!deferLoadAwaitingQueryBuilt)
-            {
-                StreamModel.getInstance().fetch(currentRequestObj.toString(), false);
-            }
-        }
+    	// If group is null, then that means that the group 
+    	// was not found. As a result, a "Group not found" 
+    	// page should be displayed. 
+    	// This page is very similar to the "Activity not found" page
+    	if (group == null)
+    	{	
+    		showGroupNotFoundPage();
+    	}
+    	else
+	    {
+	    	currentDisplayName = group.getDisplayName();
+	        currentScopeId = group.getStreamId();
+	
+	        currentStream.setDisplayName(group.getName());
+	        streamDetailsComposite.setVisible(true);
+	
+	        if (group.isRestricted())
+	        {
+	            streamOptionsPanel.getStyle().setDisplay(Display.NONE);
+	            currentStream.setScopeType(null);
+	            postBox.setVisible(false);
+	
+	            errorPanel.clear();
+	            errorPanel.setVisible(true);
+	            activitySpinner.addClassName(StaticResourceBundle.INSTANCE.coreCss().displayNone());
+	            errorPanel.add(new Label("Access to this group is restricted"));
+	            errorPanel.add(new Label("To view this group's stream please request access from its coordinator"));
+	
+	            final SpinnerLabelButton button = new SpinnerLabelButton(new ClickHandler()
+	            {
+	                public void onClick(final ClickEvent inArg0)
+	                {
+	                    GroupMembershipRequestModel.getInstance().insert(group.getShortName());
+	                }
+	            });
+	
+	            EventBus.getInstance().addObserver(InsertedRequestForGroupMembershipResponseEvent.class,
+	                    new Observer<InsertedRequestForGroupMembershipResponseEvent>()
+	                    {
+	                        public void update(final InsertedRequestForGroupMembershipResponseEvent inArg1)
+	                        {
+	                            button.disable();
+	                            EventBus.getInstance()
+	                                    .notifyObservers(
+	                                            new ShowNotificationEvent(new Notification(
+	                                                    "Your request for access has been sent")));
+	                        }
+	                    });
+	
+	            button.addStyleName(StaticResourceBundle.INSTANCE.coreCss().requestAccessButton());
+	            errorPanel.add(button);
+	
+	            streamPanel.clear();
+	            unseenActivityNotificationPanel.setActive(true);
+	        }
+	        else
+	        {
+	            currentStreamEntity = group;
+	
+	            if (group.getStickyActivity() != null && !singleActivityMode
+	                    && (loadedSearchTerm == null || loadedSearchTerm == ""))
+	            {
+	                stickyActivityHolder.add(stickyActivityRenderer.render(group.getStickyActivity()));
+	                UIObject.setVisible(stickyActivityArea, true);
+	            }
+	        }
+	        boolean isCoordinator = false;
+	
+	        for (PersonModelView coordinator : group.getCoordinators())
+	        {
+	            AvatarBadgeManager.getInstance().setBadge(style.streamContainerPanel(), coordinator.getUniqueId());
+	            if (coordinator.getAccountId().equals(Session.getInstance().getCurrentPerson().getAccountId()))
+	            {
+	                isCoordinator = true;
+	            }
+	        }
+	        if (!group.isStreamPostable() && !isCoordinator)
+	        {
+	            currentStream.setScopeType(null);
+	        }
+	        /*else
+	        {
+	            getEmailContactLink.setHref("/resources/emailcontact/stream/group/" + group.getId());
+	            getEmailContactLink.setVisible(true);
+	        }*/
+	
+	        if (!singleActivityMode)
+	        {
+	            if (Session.getInstance().getCurrentPersonRoles().contains(Role.SYSTEM_ADMIN) || isCoordinator)
+	            {
+	                streamContainerPanel.addStyleName(StaticResourceBundle.INSTANCE.coreCss().hasOwnerRights());
+	            }
+	
+	            EventBus.getInstance().notifyObservers(new PostableStreamScopeChangeEvent(currentStream));
+	        }
+	
+	        if (deferLoadAwaitingEntityReceived)
+	        {
+	            deferLoadAwaitingEntityReceived = false;
+	            currentRequestObj = StreamJsonRequestFactory.setExcludeId(group.getStickyActivityId(), 
+	            		currentRequestObj);
+	            if (!deferLoadAwaitingQueryBuilt)
+	            {
+	                fetchStream(currentRequestObj);
+	            }
+	        }
+    	}
     }
+    
+    /**
+     * Shows a "not found" message.
+     */
+    private void showGroupNotFoundPage()
+    {
+    	activitySpinner.addClassName(StaticResourceBundle.INSTANCE.coreCss().displayNone());
+    	streamPanel.clear();
+		errorPanel.clear();
+		postBox.setVisible(false);
+		
+    	Panel errorReport = new FlowPanel();
+        errorReport.addStyleName(StaticResourceBundle.INSTANCE.coreCss().warningReport());
 
+        FlowPanel centeringPanel = new FlowPanel();
+        centeringPanel.addStyleName(StaticResourceBundle.INSTANCE.coreCss().warningReportContainer());
+        centeringPanel.add(errorReport);
+        streamPanel.add(centeringPanel);
+
+        FlowPanel msgPanel = new FlowPanel();
+
+        Label msgHeader = new Label("Group not found");
+        msgHeader.addStyleName(StaticResourceBundle.INSTANCE.coreCss().warningMessage());
+
+        Label msgText = new Label("The group you were looking for has been deleted or could not be found.");
+        FlowPanel text = new FlowPanel();
+        text.add(msgText);
+        text.addStyleName(StaticResourceBundle.INSTANCE.coreCss().errorMessageText());
+
+        msgPanel.add(msgHeader);
+        msgPanel.add(msgText);
+
+        streamPanel.removeStyleName(StaticResourceBundle.INSTANCE.coreCss().hidden());
+        
+		streamPanel.setVisible(true);
+		streamContainerPanel.setVisible(true);
+        errorReport.add(msgPanel);
+		errorPanel.setVisible(true);
+		errorReport.setVisible(true);
+		centeringPanel.setVisible(true);
+		msgPanel.setVisible(true);
+    }
+    
     /**
      * Handle views changed.
      *
@@ -1210,8 +1290,9 @@ public class ActivityContent extends Composite
                                     "custom/"
                                             + filter.getId()
                                             + "/"
-                                            + filter.getRequest().replace("%%CURRENT_USER_ACCOUNT_ID%%",
-                                                    Session.getInstance().getCurrentPerson().getAccountId()),
+                                            + URL.encodeComponent(filter.getRequest().
+                                                        replace("%%CURRENT_USER_ACCOUNT_ID%%",
+                                                            Session.getInstance().getCurrentPerson().getAccountId())),
                                     "style/images/customStream.png", new ClickHandler()
                                     {
 
@@ -1258,7 +1339,7 @@ public class ActivityContent extends Composite
                 JSONObject moreItemsRequest = StreamJsonRequestFactory.setMaxId(longOldestActivityId,
                         StreamJsonRequestFactory.getJSONRequest(currentRequestObj.toString()));
 
-                StreamModel.getInstance().fetch(moreItemsRequest.toString(), false);
+                fetchStream(moreItemsRequest);
             }
         });
 
@@ -1379,8 +1460,9 @@ public class ActivityContent extends Composite
                 }
                 // TODO: get correct title from somewhere.
                 String prefs = "{\"streamQuery\":"
-                        + makeJsonString(STREAM_URL_TRANSFORMER.getUrl(null, request.toString())) + ",\"gadgetTitle\":"
-                        + makeJsonString(currentDisplayName) + ",\"streamLocation\":" + makeJsonString(url) + "}";
+                        + makeJsonString(STREAM_URL_TRANSFORMER.getUrl(null, request.toString()))
+                        + ",\"gadgetTitle\":" + makeJsonString(currentDisplayName) + ",\"streamLocation\":"
+                        + makeJsonString(url) + "}";
 
                 GadgetModel.getInstance().insert(
                         new AddGadgetToStartPageRequest("{d7a58391-5375-4c76-b5fc-a431c42a7555}", null, prefs));
@@ -1407,6 +1489,18 @@ public class ActivityContent extends Composite
                         + currentStream.getUniqueKey());
             }
         });
+    }
+
+    /**
+     * Requests a stream via the model and tracks it for proper reciept matching.
+     *
+     * @param request
+     *            The request in JSON form.
+     */
+    private void fetchStream(final JSONObject request)
+    {
+        currentStreamRequest = request.toString();
+        StreamModel.getInstance().fetch(currentStreamRequest, false);
     }
 
     /**
@@ -1511,9 +1605,12 @@ public class ActivityContent extends Composite
         deferLoadAwaitingQueryBuilt = false;
         deferLoadAwaitingEntityReceived = false;
 
-        getEmailContactLink.setVisible(false);
+        //getEmailContactLink.setVisible(false);
 
-        if (views == null || views.size() == 0 || views.get(0).equals("following"))
+        boolean streamIsAnEntity = false;
+
+        if (views == null || views.size() == 0 || views.get(0).equals("following")
+                || ((views.get(0).equals("sort") && (views.size() == 2))))
         {
             currentRequestObj = StreamJsonRequestFactory.setSourceAsFollowing(currentRequestObj);
             setAsActiveStream(followingFilterPanel);
@@ -1525,6 +1622,7 @@ public class ActivityContent extends Composite
         }
         else if (views.get(0).equals("person") && views.size() >= 2)
         {
+            streamIsAnEntity = true;
             showRecipient = ShowRecipient.RESOURCE_ONLY;
             String accountId = views.get(1);
             currentRequestObj = StreamJsonRequestFactory.addRecipient(EntityType.PERSON, accountId, currentRequestObj);
@@ -1550,6 +1648,7 @@ public class ActivityContent extends Composite
         }
         else if (views.get(0).equals("group") && views.size() >= 2)
         {
+            streamIsAnEntity = true;
             showRecipient = ShowRecipient.RESOURCE_ONLY;
             String shortName = views.get(1);
             currentRequestObj = StreamJsonRequestFactory.addRecipient(EntityType.GROUP, shortName, currentRequestObj);
@@ -1581,7 +1680,7 @@ public class ActivityContent extends Composite
         }
         else if (views.get(0).equals("custom") && views.size() >= 3)
         {
-            currentRequestObj = StreamJsonRequestFactory.getJSONRequest(views.get(2));
+            currentRequestObj = StreamJsonRequestFactory.getJSONRequest(URL.decodeComponent(views.get(2)));
             setAsActiveStream(customStreamWidgetMap.get(Long.parseLong(views.get(1))));
             currentStream.setScopeType(null);
             EventBus.getInstance().notifyObservers(new PostableStreamScopeChangeEvent(currentStream));
@@ -1620,6 +1719,10 @@ public class ActivityContent extends Composite
             searchContainer.removeClassName(style.activeSearch());
         }
 
+        if (!streamIsAnEntity)
+        {
+            streamDetailsComposite.setVisible(true);
+        }
         renderer.setShowRecipientInStream(showRecipient);
 
         if (!singleActivityMode)
@@ -1661,7 +1764,7 @@ public class ActivityContent extends Composite
             deferLoadAwaitingQueryBuilt = false;
             if (!deferLoadAwaitingEntityReceived)
             {
-                StreamModel.getInstance().fetch(currentRequestObj.toString(), false);
+                fetchStream(currentRequestObj);
             }
         }
         else

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011 Lockheed Martin Corporation
+ * Copyright (c) 2009-2013 Lockheed Martin Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import javax.naming.directory.Attributes;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.eurekastreams.server.domain.Person;
+import org.eurekastreams.server.persistence.mappers.cache.Transformer;
 import org.springframework.ldap.core.AttributesMapper;
 
 /**
@@ -82,8 +83,13 @@ public class LdapToPersonMapper implements AttributesMapper
     private List<String> additionalProperties;
 
     /**
+     * Transformer to convert the Attributes to a display name suffix (optional).
+     */
+    private Transformer<Attributes, String> attributesToDisplayNameSuffixTransformer;
+
+    /**
      * Maps the LDAP attributes to a Person.
-     *
+     * 
      * @param attrs
      *            the attributes.
      * @throws NamingException
@@ -115,19 +121,30 @@ public class LdapToPersonMapper implements AttributesMapper
             String preferredName = (splitCn.length > 1) ? splitCn[1] : firstName;
 
             person = new Person(accountId, firstName, middleName, lastName, preferredName);
-
             log.debug("Company Name:" + companyName);
 
             person.setCompanyName(companyName);
             person.setTitle(title);
             person.setEmail(email);
 
+            if (attributesToDisplayNameSuffixTransformer != null)
+            {
+                String displayNameSuffix = attributesToDisplayNameSuffixTransformer.transform(attrs);
+                if (displayNameSuffix == null)
+                {
+                    displayNameSuffix = "";
+                }
+                person.setDisplayNameSuffix(displayNameSuffix);
+                log.debug("Setting the display name suffix: " + displayNameSuffix);
+            }
+
             if (additionalProperties != null)
             {
                 HashMap<String, String> propertiesMap = new HashMap<String, String>();
                 for (String property : additionalProperties)
                 {
-                    // Some additional configurated properties may not be available for all users. Do not
+                    // Some additional configurated properties may not be
+                    // available for all users. Do not
                     // halt on those properties, just move on.
                     try
                     {
@@ -231,5 +248,17 @@ public class LdapToPersonMapper implements AttributesMapper
     public void setCompanyAttrib(final String inCompanyAttrib)
     {
         companyAttrib = inCompanyAttrib;
+    }
+
+    /**
+     * Set the attributes to display name suffix mapper.
+     * 
+     * @param inAttributesToDisplayNameSuffixTransformer
+     *            transformer to create the display name suffix from Attributes
+     */
+    public void setAttributesToDisplayNameSuffixTransformer(
+            final Transformer<Attributes, String> inAttributesToDisplayNameSuffixTransformer)
+    {
+        attributesToDisplayNameSuffixTransformer = inAttributesToDisplayNameSuffixTransformer;
     }
 }

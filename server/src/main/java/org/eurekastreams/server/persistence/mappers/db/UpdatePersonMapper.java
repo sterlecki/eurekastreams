@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Lockheed Martin Corporation
+ * Copyright (c) 2010-2013 Lockheed Martin Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,19 @@ import java.util.HashMap;
 import org.eurekastreams.server.domain.Person;
 import org.eurekastreams.server.persistence.mappers.BaseArgDomainMapper;
 import org.eurekastreams.server.persistence.mappers.requests.UpdatePersonResponse;
+import org.eurekastreams.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 
 /**
  * Mapper to update the person in the DB with any additional properties found from ldap or updated last name.
  */
 public class UpdatePersonMapper extends BaseArgDomainMapper<Person, UpdatePersonResponse>
 {
+    /**
+     * Logger.
+     */
+    private final Log log = LogFactory.make();
+
     /**
      * Update the person in the DB.
      * 
@@ -42,22 +49,40 @@ public class UpdatePersonMapper extends BaseArgDomainMapper<Person, UpdatePerson
         HashMap<String, String> ldapAdditionalProperties = ldapPerson.getAdditionalProperties();
         HashMap<String, String> dbAdditionalProperties = dbPerson.getAdditionalProperties();
         boolean wasPersonUpdated = false;
+        boolean wasPersonDisplayNameUpdated = false;
 
         // Checks to see if last name in ldap matches what the db has, updating db if they don't match.
         if (!dbPerson.getLastName().equals(ldapPerson.getLastName()))
         {
             dbPerson.setLastName(ldapPerson.getLastName());
             wasPersonUpdated = true;
+            wasPersonDisplayNameUpdated = true;
         }
 
         // Checks to see if company in ldap matches what the db has, updating db if they don't match.
-        if (dbPerson.getCompanyName() == null
-                && ldapPerson.getCompanyName() != null
-                || (dbPerson.getCompanyName() != null 
-                        && !dbPerson.getCompanyName().equals(ldapPerson.getCompanyName())))
+        if ((dbPerson.getCompanyName() == null && ldapPerson.getCompanyName() != null)
+                || (dbPerson.getCompanyName() != null
+                // line wrap
+                && !dbPerson.getCompanyName().equals(ldapPerson.getCompanyName())))
         {
             dbPerson.setCompanyName(ldapPerson.getCompanyName());
             wasPersonUpdated = true;
+        }
+
+        // Checks to see if the display name suffix has changed - (displayNameSuffix isn't nullable)
+        log.debug("Checking if the displayNameSuffix changed");
+        String newDisplayNameSuffix = "";
+        if (ldapPerson.getDisplayNameSuffix() != null)
+        {
+            newDisplayNameSuffix = ldapPerson.getDisplayNameSuffix();
+        }
+        if (!dbPerson.getDisplayNameSuffix().equals(newDisplayNameSuffix))
+        {
+            // display name has changed
+            log.debug("displayNameSuffix did change - new value: " + newDisplayNameSuffix);
+            dbPerson.setDisplayNameSuffix(newDisplayNameSuffix);
+            wasPersonUpdated = true;
+            wasPersonDisplayNameUpdated = true;
         }
 
         // Looks for any additional properties defined for the person retrieved from ldap call.
@@ -114,6 +139,6 @@ public class UpdatePersonMapper extends BaseArgDomainMapper<Person, UpdatePerson
             getEntityManager().flush();
         }
 
-        return new UpdatePersonResponse(dbPerson.getId(), wasPersonUpdated);
+        return new UpdatePersonResponse(dbPerson.getId(), wasPersonUpdated, wasPersonDisplayNameUpdated);
     }
 }

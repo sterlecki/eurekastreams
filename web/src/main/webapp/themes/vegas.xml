@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Theme>
-  <Title>Las Vegas</Title>
-  <Description>Las Vegas sky line</Description>
-  <AuthorName>Phil Plait</AuthorName>
-  <AuthorEmail>phil.plait@awesome.com</AuthorEmail>
+	<Title>Las Vegas</Title>
+	<Description>Las Vegas sky line</Description>
+	<AuthorName>Phil Plait</AuthorName>
+	<AuthorEmail>phil.plait@awesome.com</AuthorEmail>
 	<HeaderBackground>
 		<HeaderBackgroundColor>black</HeaderBackgroundColor>
 		<HeaderForegroundColor>white</HeaderForegroundColor>
